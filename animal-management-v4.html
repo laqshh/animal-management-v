@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Remote Animal Management System</title>
+<style>
+:root{--bg:#f4f9fc;--card:#fff;--tx:#24343f;--mu:#6b7f8c;--ac:#2f8fbf;--ac2:#e4f2fa;--bd:#dbe8f0;--map:#e4f2fa;--map2:#d3e8f4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--card);border-bottom:1px solid var(--bd);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+.bar{max-width:1100px;margin:auto;padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.brand{font-weight:700;font-size:17px;margin-right:auto}
+button,select,input,textarea{font:inherit;color:inherit}
+.btn{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
+.btn.alt{background:var(--ac2);color:var(--ac)}
+.btn.red{background:#d95b5b}
+.tab{background:none;border:0;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--mu);font-weight:600}
+.tab.on{background:var(--ac2);color:var(--ac)}
+main{max-width:1100px;margin:auto;padding:16px}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.row>*{flex:1;min-width:130px}
+input,select,textarea{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;width:100%}
+label{display:block;font-size:13px;font-weight:600;color:var(--mu);margin:10px 0 4px}
+.grid{display:grid;grid-template-columns:1.1fr 1fr;gap:14px}
+@media(max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px}
+.note{font-size:12px;color:var(--mu);margin-top:6px}
+.list{display:flex;flex-direction:column;gap:10px;max-height:480px;overflow:auto}
+.item{display:flex;gap:10px;cursor:pointer;align-items:center}
+.th{width:64px;height:64px;border-radius:10px;background:var(--ac2);display:grid;place-items:center;font-size:30px;object-fit:cover;flex:none}
+.badge{display:inline-block;font-size:11px;font-weight:700;color:#fff;padding:2px 8px;border-radius:99px}
+.chip{background:var(--ac2);color:var(--ac);padding:2px 8px;border-radius:99px;font-size:12px;font-weight:600}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px}
+.stats b{display:block;font-size:24px}
+.modal{position:fixed;inset:0;background:#24343f55;display:grid;place-items:center;padding:16px;z-index:20;overflow:auto}
+.box{background:var(--card);border-radius:14px;padding:18px;max-width:540px;width:100%;max-height:92vh;overflow:auto}
+.img{width:100%;max-height:260px;object-fit:cover;border-radius:10px;margin-bottom:8px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{padding:6px;border-bottom:1px solid var(--bd);text-align:left}
+.tl{border-left:3px solid var(--ac);padding-left:10px;margin:8px 0;font-size:13px}
+.err{color:#d14343;font-size:13px;margin-top:6px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:10px 16px;border-radius:99px;z-index:30;display:none}
+h2{margin:0 0 10px}
+</style></head><body>
+<header><div class="bar" id="nav"></div></header>
+<main id="app"></main><div id="modal"></div><div id="toast"></div>
+<script>
+const K='ram_v1',KU='ram_user';
+const T={Dog:'🐕',Cat:'🐈',Cow:'🐄',Bird:'🐦',Other:'🐾'};
+const FL=['New','Help Requested','Rescue in Progress','Reunited','Resolved'];
+const SC={New:'#e0803f','Help Requested':'#d9a02e','Rescue in Progress':'#3b8fd4',Reunited:'#3fa872',Resolved:'#8496a4'};
+const KINDS=['Stray animal','Lost pet','Sighting'],CONDS=['Injured','Weak','Hungry','Healthy'];
+let D,U=null,view='reports',F={q:'',type:'',kind:'',status:''},photo='';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const $=s=>document.querySelector(s);
+const day=t=>new Date(t).toLocaleDateString(undefined,{day:'numeric',month:'short'});
+function seed(){const n=Date.now(),h=(s,by,t)=>[{s,by,t}];return{nid:7,
+users:[{id:1,name:'Admin',email:'admin@demo.com',pw:'admin123',role:'Administrator',phone:'—'},
+{id:2,name:'Paws Rescue Shelter',email:'rescuer@demo.com',pw:'rescue123',role:'Rescuer / Shelter',phone:'+91 98450 11111'},
+{id:3,name:'Anita',email:'owner@demo.com',pw:'owner123',role:'Public user',phone:'+91 98450 22222'},
+{id:4,name:'Ravi',email:'public@demo.com',pw:'public123',role:'Public user',phone:'+91 98450 33333'}],
+reports:[
+{id:1,uid:4,kind:'Stray animal',type:'Dog',cond:'Injured',loc:'Near Indiranagar metro',desc:'Brown dog with a collar, limping on the left leg',photo:'',status:'New',ts:n-864e5,history:h('New','Ravi',n-864e5)},
+{id:2,uid:3,kind:'Lost pet',type:'Dog',cond:'Healthy',loc:'Koramangala 5th Block',desc:'Brown dog with a red collar, answers to Bruno',photo:'',status:'Help Requested',ts:n-2*864e5,history:h('New','Anita',n-2*864e5).concat(h('Help Requested','Anita',n-2*864e5+36e5))},
+{id:3,uid:4,kind:'Stray animal',type:'Cat',cond:'Hungry',loc:'Cubbon Park gate 2',desc:'Small grey kitten near the food stalls',photo:'',status:'Rescue in Progress',ts:n-3*864e5,history:h('New','Ravi',n-3*864e5).concat(h('Rescue in Progress','Paws Rescue Shelter',n-2*864e5))},
+{id:4,uid:4,kind:'Sighting',type:'Dog',cond:'Weak',loc:'HSR Layout bus stop',desc:'Brown dog with collar, looks tired and thirsty',photo:'',status:'New',ts:n-36e5*5,history:h('New','Ravi',n-36e5*5)},
+{id:5,uid:2,kind:'Stray animal',type:'Cow',cond:'Injured',loc:'Hebbal flyover service road',desc:'Cow with a wound on the back leg blocking traffic',photo:'',status:'Reunited',ts:n-5*864e5,history:h('New','Ravi',n-5*864e5).concat(h('Reunited','Paws Rescue Shelter',n-4*864e5))},
+{id:6,uid:3,kind:'Lost pet',type:'Bird',cond:'Healthy',loc:'Jayanagar 4th Block',desc:'Green parrot, missing since Sunday morning',photo:'',status:'New',ts:n-864e5*1.5,history:h('New','Anita',n-864e5*1.5)}]}}
+function load(){try{D=JSON.parse(localStorage.getItem(K))}catch(e){}if(!D||!D.reports)D=seed();
+ D.users.forEach(u=>{if(u.role==='Pet owner')u.role='Public user'});
+ try{const i=+localStorage.getItem(KU);U=D.users.find(u=>u.id===i)||null}catch(e){}}
+function save(){try{localStorage.setItem(K,JSON.stringify(D));return true}catch(e){toast('Storage full – try a smaller photo');return false}}
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',2600)}
+const badge=s=>`<span class="badge" style="background:${SC[s]}">${s}</span>`;
+const closed=r=>r.status==='Reunited'||r.status==='Resolved';
+const role=r=>U&&U.role===r;
+const canManage=()=>role('Rescuer / Shelter')||role('Administrator');
+function nav(){const tabs=[['reports','Reports'],['new','+ Report'],...(U?[['mine','My reports']]:[]),...(role('Administrator')?[['admin','Admin']]:[])];
+ $('#nav').innerHTML=`<span class="brand">🐾 Remote Animal Management</span>`+tabs.map(t=>`<button class="tab ${view===t[0]?'on':''}" onclick="go('${t[0]}')">${t[1]}</button>`).join('')+
+ (U?`<span class="chip">${esc(U.name)} · ${U.role}</span><button class="btn alt" onclick="logout()">Log out</button>`:`<button class="btn" onclick="authBox()">Log in</button>`)}
+function go(v){view=v;photo='';render()}
+function render(){nav();({reports:vReports,new:vNew,mine:vMine,admin:vAdmin})[view]()}
+function filtered(){return D.reports.filter(r=>(!F.q||(r.loc+r.desc+r.type).toLowerCase().includes(F.q.toLowerCase()))&&(!F.type||r.type===F.type)&&(!F.kind||r.kind===F.kind)&&(!F.status||r.status===F.status)).sort((a,b)=>b.ts-a.ts)}
+function vReports(){const L=filtered(),c=s=>D.reports.filter(r=>r.status===s).length;
+ $('#app').innerHTML=`<div class="stats"><div class="card"><b>${D.reports.length}</b>Total reports</div><div class="card"><b>${D.reports.filter(r=>!closed(r)).length}</b>Open cases</div><div class="card"><b>${c('Rescue in Progress')}</b>Rescue in progress</div><div class="card"><b>${c('Reunited')+c('Resolved')}</b>Reunited / resolved</div></div>
+ <div class="row"><input placeholder="Search location or description" value="${esc(F.q)}" oninput="F.q=this.value;list()">
+ <select onchange="F.type=this.value;list()"><option value="">All animals</option>${Object.keys(T).map(t=>`<option ${F.type===t?'selected':''}>${t}</option>`).join('')}</select>
+ <select onchange="F.kind=this.value;list()"><option value="">All report types</option>${KINDS.map(t=>`<option ${F.kind===t?'selected':''}>${t}</option>`).join('')}</select>
+ <select onchange="F.status=this.value;list()"><option value="">All statuses</option>${FL.map(t=>`<option ${F.status===t?'selected':''}>${t}</option>`).join('')}</select></div>
+ <div class="list" id="ls" style="max-height:none"></div>`;list()}
+function list(){const L=filtered();
+ $('#ls').innerHTML=L.length?L.map(r=>`<div class="card item" onclick="detail(${r.id})">${thumb(r)}<div><b>${T[r.type]} ${r.type} · ${r.kind}</b><div class="note" style="margin:0">${esc(r.loc)} · ${r.cond} · ${day(r.ts)}</div>${badge(r.status)}</div></div>`).join(''):'<div class="card">No reports match these filters.</div>'}
+const thumb=r=>r.photo?`<img class="th" src="${r.photo}" alt="">`:`<div class="th">${T[r.type]}</div>`;
+function vNew(){if(!U){$('#app').innerHTML=`<div class="card"><h2>Submit a report</h2><p>Please log in to report an animal.</p><button class="btn" onclick="authBox()">Log in / Sign up</button></div>`;return}
+ $('#app').innerHTML=`<div class="card" style="max-width:620px;margin:auto"><h2>Report an animal</h2>
+ <label>Report type</label><select id="k">${KINDS.map(k=>`<option >${k}</option>`).join('')}</select>
+ <div class="row"><div><label>Animal type</label><select id="t">${Object.keys(T).map(t=>`<option>${t}</option>`).join('')}</select></div><div><label>Condition</label><select id="c">${CONDS.map(t=>`<option>${t}</option>`).join('')}</select></div></div>
+ <label>Location (place name)</label><input id="l" placeholder="e.g. Near the park gate, MG Road">
+ <label>Description</label><textarea id="d" rows="3" placeholder="Colour, size, collar, behaviour..."></textarea>
+ <label>Photo</label><input type="file" id="p" accept="image/*" onchange="pickPhoto(this)"><div id="pv"></div>
+ <div class="err" id="e"></div><p><button class="btn" onclick="submitR()">Submit report</button></p></div>`}
+function pickPhoto(i){const f=i.files[0];if(!f)return;const im=new Image(),r=new FileReader();r.onload=()=>{im.onload=()=>{const s=Math.min(1,480/im.width),c=document.createElement('canvas');c.width=im.width*s;c.height=im.height*s;c.getContext('2d').drawImage(im,0,0,c.width,c.height);photo=c.toDataURL('image/jpeg',.7);$('#pv').innerHTML=`<img class="img" src="${photo}" alt="Preview" style="margin-top:8px">`};im.src=r.result};r.readAsDataURL(f)}
+function submitR(){const l=$('#l').value.trim(),d=$('#d').value.trim(),e=[];
+ if(l.length<3)e.push('Enter a location name.');if(d.length<10)e.push('Description needs at least 10 characters.');
+ if(e.length){$('#e').innerHTML=e.join('<br>');return}
+ const r={id:D.nid++,uid:U.id,kind:$('#k').value,type:$('#t').value,cond:$('#c').value,loc:l,desc:d,photo,status:'New',ts:Date.now(),history:[{s:'New',by:U.name,t:Date.now()}]};
+ D.reports.push(r);if(save()){toast('Report submitted');go('mine')}else D.reports.pop()}
+function vMine(){const L=D.reports.filter(r=>r.uid===U.id).sort((a,b)=>b.ts-a.ts);
+ $('#app').innerHTML=`<h2>My reports</h2><div class="list" style="max-height:none">${L.length?L.map(r=>`<div class="card item" onclick="detail(${r.id})">${thumb(r)}<div><b>${T[r.type]} ${r.type} · ${r.kind}</b><div class="note" style="margin:0">${esc(r.loc)} · ${day(r.ts)}</div>${badge(r.status)}</div></div>`).join(''):'<div class="card">You have not submitted any reports yet.</div>'}</div>`}
+function matches(r){const W=s=>new Set(s.toLowerCase().match(/[a-z]{4,}/g)||[]),w=W(r.desc),L=W(r.loc);
+ return D.reports.filter(o=>o.id!==r.id&&o.type===r.type&&(o.kind==='Lost pet')!==(r.kind==='Lost pet')&&!closed(o)).map(o=>({o,sc:[...W(o.desc)].filter(x=>w.has(x)).length*2+[...W(o.loc)].filter(x=>L.has(x)).length})).filter(m=>m.sc>=2).sort((a,b)=>b.sc-a.sc).slice(0,3)}
+function detail(id){const r=D.reports.find(x=>x.id===id);if(!r)return;const u=D.users.find(x=>x.id===r.uid),m=matches(r);
+ const canUpd=canManage();
+ const opts=FL;
+ $('#modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeM()"><div class="box">
+ ${r.photo?`<img class="img" src="${r.photo}" alt="Animal photo">`:`<div class="th" style="width:100%;height:110px;font-size:56px;margin-bottom:8px">${T[r.type]}</div>`}
+ <h2>${r.type} · ${r.kind}</h2>${badge(r.status)} <span class="chip">${r.cond}</span>
+ <p>${esc(r.desc)}</p><div class="note">📍 ${esc(r.loc)} · Reported ${day(r.ts)}</div>
+ <p><b>Contact:</b> ${U?`${esc(u?u.name:'Unknown')} · ${esc(u?u.phone:'')} · ${esc(u?u.email:'')}`:'<i>Log in to view reporter contact details.</i>'}</p>
+ ${canUpd&&!closed(r)||canUpd&&role('Administrator')?`<label>Update status</label><div class="row"><select id="ns">${opts.map(s=>`<option ${s===r.status?'selected':''}>${s}</option>`).join('')}</select><button class="btn" style="flex:0" onclick="setStatus(${r.id})">Update</button></div>`:''}
+ ${m.length?`<label>Possible matches</label>${m.map(x=>`<div class="card item" style="margin-bottom:6px" onclick="detail(${x.o.id})">${thumb(x.o)}<div><b>${x.o.kind}</b> · ${esc(x.o.loc)}<div class="note" style="margin:0">${esc(x.o.desc)}</div></div></div>`).join('')}`:''}
+ <label>Status history</label>${r.history.map(h=>`<div class="tl"><b>${h.s}</b> · ${esc(h.by)} · ${day(h.t)}</div>`).join('')}
+ <p style="display:flex;gap:8px;margin-bottom:0">${role('Administrator')?`<button class="btn red" onclick="delR(${r.id})">Remove report</button>`:''}<button class="btn alt" onclick="closeM()">Close</button></p></div></div>`}
+function closeM(){$('#modal').innerHTML=''}
+function setStatus(id){if(!canManage())return;const r=D.reports.find(x=>x.id===id),s=$('#ns').value;if(s===r.status)return;r.status=s;r.history.push({s,by:U.name,t:Date.now()});save();toast('Status updated to '+s);closeM();render()}
+function delR(id){if(!confirm('Remove this report?'))return;D.reports=D.reports.filter(r=>r.id!==id);save();closeM();render()}
+function vAdmin(){$('#app').innerHTML=`<h2>Admin panel</h2><div class="card" style="margin-bottom:14px"><b>Users</b><table><tr><th>Name</th><th>Email</th><th>Role</th><th></th></tr>${D.users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td>${u.role}</td><td>${u.role==='Administrator'?'':`<button class="btn red" onclick="delU(${u.id})">Remove</button>`}</td></tr>`).join('')}</table></div>
+ <div class="card"><b>All reports</b><table><tr><th>Animal</th><th>Location</th><th>Status</th><th></th></tr>${D.reports.map(r=>`<tr><td>${T[r.type]} ${r.kind}</td><td>${esc(r.loc)}</td><td>${badge(r.status)}</td><td><button class="btn alt" onclick="detail(${r.id})">Open</button></td></tr>`).join('')}</table></div>
+ <p><button class="btn alt" onclick="if(confirm('Reset all demo data?')){localStorage.removeItem(K);load();U=null;go('reports')}">Reset demo data</button></p>`}
+function delU(id){if(!confirm('Remove this user and their reports?'))return;D.users=D.users.filter(u=>u.id!==id);D.reports=D.reports.filter(r=>r.uid!==id);save();render()}
+function authBox(tab='in',msg=''){$('#modal').innerHTML=`<div class="modal" onclick="if(event.target===this)closeM()"><div class="box"><h2>${tab==='in'?'Log in':'Create account'}</h2>
+ ${tab==='up'?`<label>Name</label><input id="an"><label>Phone</label><input id="ap">`:''}
+ <label>Email</label><input id="ae" type="email"><label>Password</label><input id="aw" type="password">
+ ${tab==='up'?`<label>I am a</label><select id="ar"><option>Public user</option><option>Rescuer / Shelter</option></select>`:''}
+ <div class="err">${msg}</div><p><button class="btn" onclick="auth('${tab}')">${tab==='in'?'Log in':'Sign up'}</button> <button class="btn alt" onclick="authBox('${tab==='in'?'up':'in'}')">${tab==='in'?'Create account':'I have an account'}</button></p>
+ ${tab==='in'?`<div class="note" style="margin-top:10px"><b>Demo accounts</b> (email / password)<br>admin@demo.com / admin123 (Administrator)<br>rescuer@demo.com / rescue123 (Rescuer / Shelter)<br>public@demo.com / public123 (Public user)</div>`:''}</div></div>`}
+function loginAs(id){U=D.users.find(u=>u.id===id);try{localStorage.setItem(KU,id)}catch(e){}closeM();toast('Logged in as '+U.name);render()}
+function auth(tab){const e=$('#ae').value.trim().toLowerCase(),p=$('#aw').value;
+ if(!/^\S+@\S+\.\S+$/.test(e))return authBox(tab,'Enter a valid email.');if(p.length<6)return authBox(tab,'Password must be at least 6 characters.');
+ if(tab==='in'){const u=D.users.find(u=>u.email===e&&u.pw===p);return u?loginAs(u.id):authBox('in','Incorrect email or password.')}
+ const n=$('#an').value.trim();if(!n)return authBox('up','Enter your name.');if(D.users.some(u=>u.email===e))return authBox('up','Email already registered.');
+ const u={id:Date.now(),name:n,email:e,pw:p,role:$('#ar').value,phone:$('#ap').value.trim()||'—'};D.users.push(u);save();loginAs(u.id)}
+function logout(){U=null;try{localStorage.removeItem(KU)}catch(e){}view='reports';render()}
+load();render();
+</script></body></html>
